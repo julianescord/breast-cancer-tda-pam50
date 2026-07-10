@@ -1,0 +1,37 @@
+# --- Datos pesados (no versionar; documentar procedencia en README) ---
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# --- renv: versiona el lock, ignora la librería local ---
+renv/library/
+renv/local/
+renv/cellar/
+renv/staging/
+renv/python/
+renv/sandbox/
+
+# --- R / RStudio ---
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+.Rapp.history
+
+# --- Salidas grandes (opcional: comenta si quieres versionar figuras) ---
+results/figures/*
+!results/figures/.gitkeep
+# modelos entrenados (pesados)
+results/*.rds
+
+# --- Generados ---
+Rplots.pdf
+# informe HTML con figuras embebidas (regenerar: scripts/14_build_report_html.R)
+docs/report_built.html
+
+# --- Sistema ---
+.DS_Store
+Thumbs.db
+*~

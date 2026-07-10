@@ -1,0 +1,5 @@
+.metric,.estimator,.estimate,.config
+accuracy,multiclass,0.8502202643171806,pre0_mod0_post0
+bal_accuracy,macro,0.8563849674208692,pre0_mod0_post0
+kap,multiclass,0.768752912976896,pre0_mod0_post0
+roc_auc,hand_till,0.9410588895652019,pre0_mod0_post0
