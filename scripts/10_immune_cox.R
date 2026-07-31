@@ -41,13 +41,16 @@ cat("(C2 debería ser el más bajo = inmuno-frío)\n")
 
 # (a) comunidad + inmune
 cat("\n===== (a) Cox: comunidad + inmune =====\n")
-print(round(summary(coxph(Surv(os_days,os_event) ~ community + immune, d))$coefficients[,c("exp(coef)","Pr(>|z|)")],4))
+m_a <- coxph(Surv(os_days, os_event) ~ community + immune, d)
+r_a <- cox_report(m_a); print(r_a$table, row.names = FALSE)
+cat(sprintf("PH global (cox.zph) p = %.3g\n", r_a$zph_global_p))
 
 # (b) modelo completo: grado + proliferación + inmune
 dg <- d[!is.na(d$nhg), ]
 cat(sprintf("\n===== (b) Cox: comunidad + NHG + proliferación + inmune (n=%d) =====\n", nrow(dg)))
-m_full <- coxph(Surv(os_days,os_event) ~ community + nhg + prolif + immune, dg)
-print(round(summary(m_full)$coefficients[,c("exp(coef)","Pr(>|z|)")],4))
+m_full <- coxph(Surv(os_days, os_event) ~ community + nhg + prolif + immune, dg)
+r_full <- cox_report(m_full); print(r_full$table, row.names = FALSE)
+cat(sprintf("PH global (cox.zph) p = %.3g\n", r_full$zph_global_p))
 
 m_base <- coxph(Surv(os_days,os_event) ~ nhg + prolif + immune, dg)
 p_lrt <- anova(m_base, m_full)$`Pr(>|Chi|)`[2]

@@ -37,8 +37,9 @@ d$community <- factor(d$community); d$nhg <- factor(d$nhg)
 # --- 3. Validación del score: ¿C2 tiene mayor proliferación? -----------------
 cat("\n=== Proliferación media por comunidad (LumA) ===\n")
 print(round(tapply(d$prolif, d$community, mean), 3))
-cat(sprintf("Correlación score vs Ki67-IHC (donde existe): %.2f\n",
-            suppressWarnings(cor(d$prolif, as.numeric(d$ki67_status), use="complete.obs"))))
+# Sanity check: el score debería crecer con el Ki67-IHC (categórico: Low/High).
+cat("Proliferación media por estado Ki67-IHC (donde existe):\n")
+print(round(tapply(d$prolif, d$ki67_status, mean), 3))
 
 # --- 4. Cox: comunidad ajustada por grado + proliferación --------------------
 dg <- d[!is.na(d$nhg), ]
@@ -46,7 +47,8 @@ cat(sprintf("\nLumA analizables (nhg no-NA): %d | proliferación completa\n", nr
 
 cat("\n===== Cox: comunidad + NHG + proliferación =====\n")
 m_full <- coxph(Surv(os_days, os_event) ~ community + nhg + prolif, data = dg)
-print(round(summary(m_full)$coefficients[, c("exp(coef)","Pr(>|z|)")], 4))
+r_full <- cox_report(m_full); print(r_full$table, row.names = FALSE)
+cat(sprintf("PH global (cox.zph) p = %.3g\n", r_full$zph_global_p))
 
 # LRT: ¿la comunidad aporta SOBRE grado + proliferación?
 m_base <- coxph(Surv(os_days, os_event) ~ nhg + prolif, data = dg)

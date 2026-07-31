@@ -45,6 +45,11 @@ respetar estas reglas.
 - **Réplicas**: hay 136 réplicas técnicas (`F####repl` = réplica de `F####`). Del
   mismo tumor **no pueden** repartirse entre train/test (fuga). Se agrupan por
   `patient_id` (= `F####` sin sufijo) en el split (`group_initial_split` / `group_vfold_cv`).
+  Además, en cualquier **inferencia** (log-rank, Cox, expresión diferencial) el mismo
+  tumor **no puede contar como dos observaciones** (pseudo-replicación → n inflado, p
+  anti-conservadores): se deja **una fila por paciente** con
+  `drop_technical_replicates()` (`R/functions.R`). El Mapper sí se construye con todas
+  las muestras; la deduplicación es solo para la parte estadística.
 
 ---
 
@@ -125,8 +130,10 @@ el conjunto de entrenamiento dentro de cada fold** y aplicarse al test.
   (t-test, correlación con la clase, etc.) SÍ debe ir dentro de la CV.
 
 ### 2. Partición y validación
-- `initial_split` (o `group_initial_split` por paciente) → train/test, estratificado
-  por la clase objetivo.
+- `group_initial_split` **por paciente** → train/test (agrupa las réplicas técnicas).
+  Nota: al agrupar por paciente **no** se estratifica además por la clase objetivo
+  (rsample no combina `group` + `strata` aquí); la agrupación anti-fuga tiene
+  prioridad. La distribución de clases en train/test se verifica a posteriori.
 - Ajuste de hiperparámetros del SVM (coste `C`, `sigma` en RBF) con **validación
   cruzada** (`vfold_cv`, idealmente estratificada); para estimaciones honestas
   considerar **CV anidada** (`nested_cv`).

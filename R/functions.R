@@ -51,6 +51,50 @@ save_session_info <- function(path) {
   invisible(path)
 }
 
+#' Elimina réplicas técnicas: deja UNA fila por paciente (F####)
+#'
+#' Del mismo tumor no pueden contarse dos filas como observaciones independientes
+#' (pseudo-replicación → n inflado y p anti-conservadores). `F####repl` es la
+#' réplica técnica de `F####`. Se prefiere el original sobre la réplica.
+#' Úsalo antes de cualquier log-rank / Cox / expresión diferencial. (El Mapper sí
+#' se construye con todas las muestras; la deduplicación es SOLO para la inferencia.)
+#'
+#' @param df data.frame con una columna de identificador de muestra.
+#' @param sample_col Nombre de la columna de muestra (por defecto "sample").
+#' @return df con una sola fila por paciente.
+drop_technical_replicates <- function(df, sample_col = "sample") {
+  s   <- as.character(df[[sample_col]])
+  ord <- order(grepl("repl$", s), seq_along(s))  # original (FALSE) antes que repl (TRUE), estable
+  df  <- df[ord, , drop = FALSE]
+  pid <- sub("repl$", "", as.character(df[[sample_col]]))
+  df[!duplicated(pid), , drop = FALSE]
+}
+
+#' Reporte de un modelo de Cox: HR, IC95% y test de riesgos proporcionales
+#'
+#' Devuelve una tabla legible (HR con intervalo de confianza al 95% y p por
+#' término) y el p GLOBAL del test de Schoenfeld (`cox.zph`): p<0.05 sugiere
+#' violación del supuesto de riesgos proporcionales. Requiere el paquete `survival`.
+#'
+#' @param fit Objeto `coxph`.
+#' @return Lista con `$table` (data.frame) y `$zph_global_p` (numérico).
+cox_report <- function(fit) {
+  s    <- summary(fit)
+  coef <- s$coefficients
+  ci   <- s$conf.int
+  tab <- data.frame(
+    term      = rownames(coef),
+    HR        = round(coef[, "exp(coef)"], 3),
+    CI95_low  = round(ci[,  "lower .95"], 3),
+    CI95_high = round(ci[,  "upper .95"], 3),
+    p         = signif(coef[, "Pr(>|z|)"], 3),
+    row.names = NULL, check.names = FALSE
+  )
+  zph   <- tryCatch(survival::cox.zph(fit), error = function(e) NULL)
+  zph_p <- if (!is.null(zph)) as.numeric(zph$table["GLOBAL", "p"]) else NA_real_
+  list(table = tab, zph_global_p = zph_p)
+}
+
 #' Métricas por clase (one-vs-rest) a partir de la verdad y la predicción
 #'
 #' Calcula soporte, precisión, recall (= sensibilidad), especificidad y F1 para

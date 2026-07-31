@@ -16,7 +16,7 @@ algoritmo **Mapper** sobre la nube de muestras (i) recuperó la biología PAM50 
 - es pronóstico **independiente de grado, proliferación e infiltración inmune** (SCAN-B);
 - se caracteriza por un perfil **inmuno-frío + estromal/ECM** (COL11A1↑, marcadores T/B↓);
 - **replica en una cohorte independiente** (METABRIC, otra plataforma): HR 1.23/SD, p=8×10⁻⁴;
-- en METABRIC aporta sobre proliferación (≈GGI), grado y tamaño (HR 1.18, p=0.011);
+- en METABRIC aporta sobre proliferación (≈GGI), grado y tamaño (HR 1.18, p=0.009);
 - es **robusto** a los parámetros del Mapper (6/6 configuraciones) y al tamaño de la firma.
 
 ---
@@ -42,7 +42,14 @@ algoritmo **Mapper** sobre la nube de muestras (i) recuperó la biología PAM50 
 - Partición **agrupada por paciente** (`group_initial_split`); test tocado una sola vez.
 - Subgrupos topológicos definidos por **comunidades del grafo (sin usar supervivencia)**;
   la supervivencia se evalúa después (anti-circularidad).
+- **Una fila por paciente** en toda la inferencia (log-rank, Cox, DE): las 136 réplicas
+  técnicas construyen el Mapper pero no cuentan como observaciones independientes
+  (`drop_technical_replicates`), evitando pseudo-replicación.
 - Firma de validación derivada **solo en SCAN-B** y aplicada a METABRIC sin reajuste.
+- **Inferencia post-selección**: C2 se define como la comunidad LumA de peor pronóstico,
+  así que en SCAN-B es **descubrimiento/descripción** (sus p/HR son optimistas). El
+  log-rank **global** entre comunidades es el test honesto en SCAN-B; la evidencia
+  **confirmatoria** es la validación externa independiente (METABRIC).
 
 ## M — Modelo(s)
 
@@ -70,15 +77,22 @@ Ball Mapper: pureza media de nodos 0.74; gradiente ER (luminal→Her2→basal), 
 Ver [mapper_graph.png](../results/figures/mapper_graph.png).
 
 ### 4. Subgrupo C2 (Luminal A de peor pronóstico)
-Dentro de LumA, las comunidades topológicas estratifican la supervivencia
-(log-rank p=1.5×10⁻⁴). C2 vs resto:
+Dentro de LumA (1 fila/paciente, n=1652), las comunidades topológicas estratifican la
+supervivencia (log-rank **global** p=5.6×10⁻⁴; test honesto, no seleccionado). El HR de
+C2 frente al resto es **descriptivo** (C2 se eligió por ser la comunidad de peor
+pronóstico → estos p en SCAN-B son optimistas; la confirmación es METABRIC, §6). Todos
+los modelos cumplen riesgos proporcionales (`cox.zph` global p>0.17):
 
-| Ajuste (Cox, SCAN-B) | HR de C2 | p |
-|---|---|---|
-| Sin ajustar | 2.33 | 2×10⁻⁴ |
-| + grado (NHG) | 2.22 | 5×10⁻⁴ |
-| + grado + proliferación | 2.16 | 1×10⁻³ |
-| + grado + proliferación + inmune | 2.02 | 8×10⁻³ |
+| Ajuste (Cox, SCAN-B) | HR de C2 (IC95%) | p | LRT (¿aporta?) |
+|---|---|---|---|
+| Sin ajustar | 2.20 (1.40–3.44) | 5.9×10⁻⁴ | — |
+| + grado (NHG) | 2.09 (1.33–3.29) | 1.4×10⁻³ | 7.4×10⁻⁴ |
+| + grado + proliferación | 2.06 (1.29–3.28) | 2.3×10⁻³ | 1.0×10⁻³ |
+| + grado + proliferación + inmune | 1.95 (1.16–3.27) | 1.2×10⁻² | 2.9×10⁻² |
+
+La proliferación e infiltración inmune **no** son pronósticas por sí solas dentro de
+LumA (p=0.76 y 0.63); el efecto lo aporta C2. (Datos: corrida con réplicas técnicas
+deduplicadas, 3409→3273 pacientes.)
 
 Ver [km_within_dominant.png](../results/figures/km_within_dominant.png).
 
@@ -88,20 +102,22 @@ y CCL19 (p≈10⁻¹⁶⁴); suben COL11A1, IBSP, HAPLN1, CEMIP.
 Ver [c2_volcano.png](../results/figures/c2_volcano.png), [tabla DE](../results/tables/c2_differential_expression.csv).
 
 ### 6. Validación externa (METABRIC) y rigor
-Firma C2 (SCAN-B) aplicada a 700 LumA de METABRIC → C2-like peor supervivencia:
-log-rank p=0.024; **Cox continuo HR=1.23/SD, p=8×10⁻⁴**.
+Firma C2 (SCAN-B, deduplicada) aplicada a 700 LumA de METABRIC → C2-like peor
+supervivencia: log-rank p=0.027; **Cox continuo HR=1.23/SD (IC95% 1.09–1.39), p=8×10⁻⁴**
+(riesgos proporcionales OK, `cox.zph` p=0.40).
 Ver [metabric_km_c2.png](../results/figures/metabric_km_c2.png).
 
-| Modelo (METABRIC, HR de C2 por SD) | HR | p |
+| Modelo (METABRIC, HR de C2 por SD) | HR (IC95%) | p |
 |---|---|---|
 | C2 solo | 1.23 | 8×10⁻⁴ |
-| + proliferación (≈GGI) | 1.23 | 1×10⁻³ |
+| + proliferación (≈GGI) | 1.23 | 9×10⁻⁴ |
 | + grado | 1.22 | 2×10⁻³ |
-| + prolif + grado + tamaño | 1.18 | 0.011 |
+| + prolif + grado + tamaño | 1.18 (1.04–1.34) | 9×10⁻³ |
 
-Robustez: firma estable con 25–200 genes (p 3×10⁻⁵ a 8×10⁻⁴).
-Sensibilidad Mapper (SCAN-B): **6/6** configuraciones (eps × clustering) con log-rank
-LumA significativo y comunidad peor siempre inmuno-fría. [tabla](../results/tables/scanb_sensitivity.csv).
+Robustez: firma estable con 25–200 genes (HR 1.18–1.28, p 5×10⁻⁵ a 8×10⁻⁴).
+Sensibilidad Mapper (SCAN-B, deduplicada): **6/6** configuraciones (eps × clustering) con
+log-rank LumA significativo (p 1×10⁻⁴ a 4×10⁻²) y comunidad peor siempre inmuno-fría.
+[tabla](../results/tables/scanb_sensitivity.csv).
 
 ---
 
@@ -115,9 +131,13 @@ Su biología (inmuno-frío + estroma/ECM) es coherente con agresividad.
 **Novedad y límites.** El **efecto es modesto** (HR ~1.2/SD en validación). La
 contribución es doble: (a) **metodológica** — TDA no supervisada recupera estructura
 pronóstica clínicamente relevante dentro de un subtipo homogéneo; (b) **una firma**
-que añade sobre proliferación/grado. Para publicación faltaría: comparación formal
-frente a firmas comerciales (Oncotype DX, Prosigna/ROR-P), análisis multivariable con
-más covariables clínicas, y una tercera cohorte.
+que añade sobre proliferación/grado. Limitaciones a declarar: (i) **pocos eventos**
+(353/3409 ≈ 10 %; seguimiento mediano ~4,4 años) → poder limitado dentro de subgrupos;
+(ii) el hallazgo en SCAN-B es **descubrimiento** (C2 seleccionado por peor pronóstico),
+por lo que la evidencia recae en la validación externa; (iii) supuesto de **riesgos
+proporcionales** verificado con `cox.zph` (reportar el p global). Para publicación
+faltaría: comparación formal frente a firmas comerciales (Oncotype DX, Prosigna/ROR-P),
+análisis multivariable con más covariables clínicas, y una tercera cohorte.
 
 **Conclusión.** El hilo pasó de un ejercicio reproducible (SVM) a un **hallazgo
 validado externamente**, con cada paso sometido a control (anti-fuga, anti-circular,

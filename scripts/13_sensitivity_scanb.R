@@ -38,9 +38,10 @@ run_cfg <- function(eps_q, clust) {
   for (i in seq_along(npts)) for (p in npts[[i]]) memb[[p]] <- c(memb[[p]], ncomm[i])
   sc <- sapply(memb, function(v) if(length(v)) as.integer(names(sort(table(v),decreasing=TRUE))[1]) else NA)
 
-  d <- data.frame(comm=factor(sc), pam=df$pam50, immune=immune[df$sample],
-                  os=df$os_days, ev=df$os_event)
+  d <- data.frame(sample=df$sample, comm=factor(sc), pam=df$pam50,
+                  immune=immune[df$sample], os=df$os_days, ev=df$os_event)
   d <- d[d$pam=="LumA" & !is.na(d$os) & d$os>0 & !is.na(d$comm), ]
+  d <- drop_technical_replicates(d, "sample")   # 1 fila/paciente (anti-pseudo-replicación)
   big <- names(which(table(d$comm)>=20)); d <- d[d$comm %in% big,]; d$comm <- droplevels(d$comm)
   if (nlevels(d$comm) < 2) return(data.frame(eps_q, clust, ncomm=nlevels(d$comm), logrank_p=NA, worst_immune=NA))
   lr <- survdiff(Surv(os,ev)~comm, d); p <- 1-pchisq(lr$chisq, length(lr$n)-1)

@@ -60,7 +60,10 @@ m_g <- coxph(Surv(OS_MONTHS,event)~c2+GRADE, dg)
 cat(sprintf("(c) C2 + grado:           HR=%.2f  p=%.4g\n", show_c2(m_g)[1], show_c2(m_g)[2]))
 dgs <- d[!is.na(d$GRADE) & !is.na(d$TUMOR_SIZE), ]
 m_full <- coxph(Surv(OS_MONTHS,event)~c2+prolif+GRADE+TUMOR_SIZE, dgs)
-cat(sprintf("(d) C2 + prolif+grado+tam:HR=%.2f  p=%.4g   (n=%d)\n", show_c2(m_full)[1], show_c2(m_full)[2], nrow(dgs)))
+ci_full <- summary(m_full)$conf.int["c2", c("lower .95","upper .95")]
+zph_full <- as.numeric(survival::cox.zph(m_full)$table["GLOBAL","p"])
+cat(sprintf("(d) C2 + prolif+grado+tam:HR=%.2f (IC95%% %.2f-%.2f)  p=%.4g   (n=%d)  [PH global p=%.3g]\n",
+            show_c2(m_full)[1], ci_full[1], ci_full[2], show_c2(m_full)[2], nrow(dgs), zph_full))
 
 # --- 5. Sensibilidad al tamaño de la firma -----------------------------------
 cat("\n=== Sensibilidad: HR/p de C2 según nº de genes por lado ===\n")

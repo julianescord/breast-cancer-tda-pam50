@@ -52,28 +52,37 @@ memb <- vector("list", n)
 for (i in seq_along(node_pts)) for (p in node_pts[[i]]) memb[[p]] <- c(memb[[p]], node_comm_vec[i])
 samp_comm <- sapply(memb, function(v) if (length(v)) as.integer(names(sort(table(v), decreasing=TRUE))[1]) else NA)
 
-# Guardar asignación por muestra (para análisis posteriores, p. ej. Cox).
-readr::write_csv(
-  data.frame(sample = df$sample, subtype = lab, community = samp_comm,
-             os_days = os_days, os_event = os_event),
-  here::here("data","processed","mapper_sample_communities.csv"))
+# Guardar asignación (para análisis posteriores, p. ej. Cox). ANTI-PSEUDO-REPLICACIÓN:
+# el Mapper se construyó con las 3409 muestras (incl. réplicas técnicas), pero para la
+# INFERENCIA de supervivencia dejamos UNA fila por paciente (F####repl es réplica de
+# F####; mismo tumor y mismo desenlace no pueden contar dos veces).
+assign_df <- data.frame(sample = df$sample, subtype = as.character(lab),
+                        community = samp_comm, os_days = os_days, os_event = os_event,
+                        stringsAsFactors = FALSE)
+assign_df$patient_id <- sub("repl$", "", assign_df$sample)
+sc_d <- drop_technical_replicates(assign_df, "sample")   # 1 fila / paciente
+message(sprintf("Filas: %d muestras -> %d pacientes (quitadas %d réplicas técnicas)",
+                nrow(assign_df), nrow(sc_d), nrow(assign_df) - nrow(sc_d)))
+readr::write_csv(sc_d, here::here("data","processed","mapper_sample_communities.csv"))
 
 # --- 4. Resumen por comunidad (composición de subtipo + supervivencia) -------
-comm_summary <- do.call(rbind, lapply(sort(unique(na.omit(samp_comm))), function(c) {
-  in_c <- which(samp_comm == c); sv <- !is.na(os_days[in_c]) & !is.na(os_event[in_c])
-  top <- sort(table(lab[in_c]), decreasing = TRUE)
-  data.frame(comunidad = c, n = length(in_c),
+comm_summary <- do.call(rbind, lapply(sort(unique(na.omit(sc_d$community))), function(cc) {
+  in_c <- which(sc_d$community == cc)
+  sv   <- !is.na(sc_d$os_days[in_c]) & !is.na(sc_d$os_event[in_c])
+  top  <- sort(table(sc_d$subtype[in_c]), decreasing = TRUE)
+  data.frame(comunidad = cc, n = length(in_c),
              subtipo_dom = names(top)[1],
              pct_dom = round(100*top[1]/length(in_c)),
              n_surv = sum(sv),
-             tasa_eventos = round(mean(os_event[in_c][sv]), 3),
-             mediana_dias = round(median(os_days[in_c][sv])))
+             tasa_eventos = round(mean(sc_d$os_event[in_c][sv]), 3),
+             mediana_dias = round(median(sc_d$os_days[in_c][sv])))
 }))
 readr::write_csv(comm_summary, here::here("results","tables","mapper_community_summary.csv"))
-cat("\n=== Comunidades topológicas ===\n"); print(comm_summary, row.names = FALSE)
+cat("\n=== Comunidades topológicas (1 fila/paciente) ===\n"); print(comm_summary, row.names = FALSE)
 
 # --- 5. Supervivencia global entre comunidades (log-rank) --------------------
-sd <- data.frame(os_days, os_event, community = factor(samp_comm), subtype = lab)
+sd <- sc_d[, c("os_days","os_event","community","subtype")]
+sd$community <- factor(sd$community)
 sd <- sd[!is.na(sd$os_days) & !is.na(sd$os_event) & !is.na(sd$community) & sd$os_days > 0, ]
 lr_global <- survdiff(Surv(os_days, os_event) ~ community, data = sd)
 p_global <- 1 - pchisq(lr_global$chisq, length(lr_global$n) - 1)
@@ -87,7 +96,7 @@ legend("bottomleft", legend = paste("C", levels(sd$community)), col = pal, lwd =
 dev.off()
 
 # --- 6. ¿Estratifica DENTRO del subtipo dominante? (el hallazgo clave) --------
-dom <- names(sort(table(lab), decreasing = TRUE))[1]   # LumA
+dom <- names(sort(table(sc_d$subtype), decreasing = TRUE))[1]   # LumA
 sub <- sd[sd$subtype == dom, ]
 sub$community <- droplevels(sub$community)
 keep <- names(which(table(sub$community) >= 20))       # comunidades con muestras suficientes

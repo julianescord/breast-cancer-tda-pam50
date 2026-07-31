@@ -31,17 +31,25 @@ cat("Completitud covariables: nhg no-NA =", sum(!is.na(d$nhg)),
 
 surv <- Surv(d$os_days, d$os_event)
 
+# NOTA (inferencia post-selección): el Cox con `community` como factor es un test
+# CONJUNTO de todas las comunidades (honesto), y el LRT de abajo es la evidencia
+# válida en SCAN-B. El HR de una comunidad concreta (p. ej. C2 = la de peor
+# pronóstico) es DESCRIPTIVO: al haberse elegido por ser la peor, su p en esta misma
+# cohorte es optimista. La prueba confirmatoria es la validación externa (METABRIC).
+
 # --- 2. Cox: comunidad SOLA (sin ajustar) ------------------------------------
 cat("\n===== (a) Cox comunidad SOLA (sin ajuste) =====\n")
 m_uni <- coxph(surv ~ community, data = d)
-print(summary(m_uni)$coefficients[, c("exp(coef)","Pr(>|z|)"), drop=FALSE])
+r_uni <- cox_report(m_uni); print(r_uni$table, row.names = FALSE)
+cat(sprintf("PH global (cox.zph) p = %.3g\n", r_uni$zph_global_p))
 
 # --- 3. Cox: comunidad AJUSTADA por grado (NHG) ------------------------------
 # (NHG suele ser la covariable más completa; Ki67 tiene muchos NA.)
 cat("\n===== (b) Cox comunidad + NHG (grado) =====\n")
 d_g <- d[!is.na(d$nhg), ]
 m_grade <- coxph(Surv(os_days, os_event) ~ community + nhg, data = d_g)
-print(summary(m_grade)$coefficients[, c("exp(coef)","Pr(>|z|)"), drop=FALSE])
+r_grade <- cox_report(m_grade); print(r_grade$table, row.names = FALSE)
+cat(sprintf("PH global (cox.zph) p = %.3g\n", r_grade$zph_global_p))
 
 # Test de razón de verosimilitud: ¿la comunidad aporta sobre solo NHG?
 m_base <- coxph(Surv(os_days, os_event) ~ nhg, data = d_g)
@@ -55,7 +63,8 @@ if (nrow(d_gk) >= 100 && nlevels(droplevels(d_gk$community)) >= 2) {
   cat(sprintf("\n===== (c) Cox comunidad + NHG + Ki67 (n=%d) =====\n", nrow(d_gk)))
   d_gk$community <- droplevels(d_gk$community)
   m_full <- coxph(Surv(os_days, os_event) ~ community + nhg + ki67, data = d_gk)
-  print(summary(m_full)$coefficients[, c("exp(coef)","Pr(>|z|)"), drop=FALSE])
+  r_full <- cox_report(m_full); print(r_full$table, row.names = FALSE)
+  cat(sprintf("PH global (cox.zph) p = %.3g\n", r_full$zph_global_p))
 } else cat(sprintf("\n(c) omitido: pocos LumA con NHG y Ki67 (n=%d)\n", nrow(d_gk)))
 
 # --- 5. Veredicto ------------------------------------------------------------

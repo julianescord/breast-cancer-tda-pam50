@@ -55,10 +55,13 @@ cat(sprintf("\nLumA en METABRIC analizables: %d (C2-like=%d, resto=%d)\n",
 lr <- survdiff(Surv(OS_MONTHS, event) ~ c2like, data = d)
 p_lr <- 1 - pchisq(lr$chisq, 1)
 cox <- coxph(Surv(OS_MONTHS, event) ~ c2_score, data = d)          # continuo, por SD
-hr  <- summary(cox)$coefficients[, "exp(coef)"]
-p_cox <- summary(cox)$coefficients[, "Pr(>|z|)"]
+r_cox <- cox_report(cox)                                           # HR, IC95%, PH
+ci <- summary(cox)$conf.int
 cat(sprintf("\nLog-rank C2-like vs resto (LumA METABRIC): p = %.4g\n", p_lr))
-cat(sprintf("Cox por score continuo: HR = %.2f por SD, p = %.4g\n", hr, p_cox))
+cat(sprintf("Cox por score continuo: HR = %.2f por SD (IC95%% %.2f-%.2f), p = %.4g\n",
+            r_cox$table$HR[1], ci[, "lower .95"], ci[, "upper .95"],
+            r_cox$table$p[1]))
+cat(sprintf("PH global (cox.zph) p = %.3g\n", r_cox$zph_global_p))
 
 png(here::here("results","figures","metabric_km_c2.png"), width=1100, height=800, res=150)
 plot(survfit(Surv(OS_MONTHS, event) ~ c2like, data=d), col=c("#4575b4","#d73027"), lwd=2,

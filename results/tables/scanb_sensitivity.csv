@@ -1,7 +1,7 @@
 eps_q,clust,ncomm,logrank_p,worst_immune
-0.08,louvain,4,4.5e-5,-0.796
-0.1,louvain,4,6.07e-4,-0.628
-0.12,louvain,3,0.0176,-0.546
-0.08,walktrap,4,0.0198,-1.29
-0.1,walktrap,3,0.00251,-0.833
-0.12,walktrap,3,0.00149,-1.048
+0.08,louvain,4,1.18e-4,-0.797
+0.1,louvain,4,0.00124,-0.629
+0.12,louvain,3,0.0293,-0.551
+0.08,walktrap,4,0.0381,-1.322
+0.1,walktrap,3,0.00863,-0.839
+0.12,walktrap,3,0.0093,-1.06
