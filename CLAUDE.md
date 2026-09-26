@@ -158,3 +158,7 @@ el conjunto de entrenamiento dentro de cada fold** y aplicarse al test.
 - Funciones puras en `R/functions.R`; los `scripts/` orquestan y guardan salidas.
 - Preferir `data.table::fread`/`readr` para I/O; para PCA a gran escala usar
   `prcomp` sobre genes de alta varianza (FactoMineR es costoso con ~30k genes).
+
+## Git
+- Los commits y PRs **no** llevan coautoría de Claude (sin `Co-Authored-By: Claude …`
+  ni "Generated with Claude Code").
