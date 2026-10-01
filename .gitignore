@@ -35,3 +35,10 @@ docs/report_built.html
 .DS_Store
 Thumbs.db
 *~
+
+# --- Manuscrito no publicado y PDFs de terceros (solo local) ---
+*.docx
+docs/*DRAFT*
+docs/manuscript_draft.md
+dwivedi2016.pdf
+.~lock.*
